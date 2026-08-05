@@ -1,0 +1,77 @@
+name: Import uploaded MindTown ZIP
+on:
+  workflow_dispatch:
+    inputs:
+      zip_path:
+        description: Path to a committed ZIP under handoff-inbox/
+        required: true
+        default: handoff-inbox/mindtown-import.zip
+  push:
+    paths:
+      - 'handoff-inbox/*.zip'
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Select uploaded ZIP
+        id: select
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ZIP='${{ inputs.zip_path }}'
+          else
+            ZIP="$(find handoff-inbox -maxdepth 1 -type f -name '*.zip' | sort | tail -1)"
+          fi
+          test -f "$ZIP"
+          echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+      - name: Safely extract declared payload
+        env:
+          ZIP_PATH: ${{ steps.select.outputs.zip }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os, shutil, stat, tempfile, zipfile
+          from pathlib import Path
+          archive=Path(os.environ['ZIP_PATH'])
+          with zipfile.ZipFile(archive) as z:
+              for info in z.infolist():
+                  path=Path(info.filename)
+                  if path.is_absolute() or '..' in path.parts or '\\' in info.filename:
+                      raise SystemExit(f'Unsafe path: {info.filename}')
+                  if ((info.external_attr >> 16) & 0o170000) == stat.S_IFLNK:
+                      raise SystemExit(f'Symlink rejected: {info.filename}')
+              manifest=json.loads(z.read('MINDTOWN_GITHUB_IMPORT.json'))
+              if manifest.get('schema') != 'MINDTOWN_GITHUB_IMPORT/1':
+                  raise SystemExit('Unsupported import manifest')
+              prefix=manifest.get('payloadRoot','repo').strip('/')+'/'
+              with tempfile.TemporaryDirectory() as td:
+                  z.extractall(td)
+                  source=Path(td)/prefix
+                  if not source.is_dir(): raise SystemExit(f'Missing payload root {prefix}')
+                  for item in source.rglob('*'):
+                      if not item.is_file(): continue
+                      rel=item.relative_to(source).as_posix()
+                      if rel.startswith(('.git/','.github/workflows/','handoff-inbox/')):
+                          raise SystemExit(f'Denied payload path: {rel}')
+                      target=Path(rel); target.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(item,target)
+          archive.unlink()
+          PY
+      - name: Test imported tree
+        run: ./tools/test.sh && ./tools/test_deploy.sh
+      - name: Commit imported files
+        shell: bash
+        run: |
+          git config user.name 'mindtown-import[bot]'
+          git config user.email 'mindtown-import[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'import: validated uploaded MindTown ZIP'
+          git push
