@@ -12,17 +12,18 @@ files: 43
 
 It contains the application source, tests, recovery tools, action-named continuation files and project documentation. It excludes:
 
+- `.git` and inverse-agent request/response history;
 - `public/vendor/playcanvas.mjs`, because the complete pinned runtime is retained in the Google Drive recovery set;
-- inverse-agent request/response history;
 - generated caches.
 
-Extract and inspect:
+Extract it for inspection and native testing:
 
 ```bash
-tar -xzf releases/mindtown-source-c0005.tar.gz
-cd mindtown
+mkdir mindtown-source
+cd mindtown-source
+tar -xzf ../releases/mindtown-source-c0005.tar.gz
 cat 00_AI_START_HERE__REPORT_STATE_AND_RUN_RESUME.md
-./resume-mindtown.sh
+./tools/test.sh
 ```
 
-The complete recovery proof uses the original immutable full checkpoint plus `MINDTOWN_DELTA_FROM_FULL_C0005_708a35889b.zip` from the Drive folder **MindTown VM Handoffs**.
+This is a source snapshot, not a resumable Git checkout. `resume-mindtown.sh` intentionally requires `.git` and therefore refuses to run here. The authoritative continuation path uses the original immutable full checkpoint plus `MINDTOWN_DELTA_FROM_FULL_C0005_708a35889b.zip` from the Drive folder **MindTown VM Handoffs**.
