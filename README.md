@@ -20,25 +20,26 @@ Inside an existing restored project:
 cd /opt/dev/work/mindtown && ./resume-mindtown.sh
 ```
 
-After a replacement VM, retrieve the immutable full checkpoint and newest cumulative delta from the Google Drive folder **MindTown VM Handoffs**, restore them, then run the command above.
+After a replacement VM, retrieve the immutable full checkpoint and newest cumulative delta from the Google Drive folder **MindTown VM Handoffs**, restore them, then run the command above. The Drive recovery set is the authoritative resumable project because it includes Git history and the pinned PlayCanvas runtime.
 
 ## Source snapshot
 
-The exact verified text-source snapshot is stored at:
+The verified text-source snapshot is stored at:
 
 ```text
 releases/mindtown-source-c0005.tar.gz
 ```
 
-Extract with:
+Extract it for source inspection or to run the native tests:
 
 ```bash
-tar -xzf releases/mindtown-source-c0005.tar.gz
-cd mindtown
-./resume-mindtown.sh
+mkdir mindtown-source
+cd mindtown-source
+tar -xzf ../releases/mindtown-source-c0005.tar.gz
+./tools/test.sh
 ```
 
-The snapshot excludes the pinned built PlayCanvas runtime to keep GitHub small. The complete recovery set, including the exact runtime, remains in Google Drive.
+The GitHub snapshot intentionally excludes `.git`, inverse-agent history, and the pinned built PlayCanvas runtime. It is not a substitute for the Drive full-plus-delta recovery set, and `resume-mindtown.sh` will correctly refuse to run in a source-only extraction.
 
 ## Current next step
 
