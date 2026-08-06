@@ -26,20 +26,14 @@ jobs:
           fetch() {
             local url="$1" out="$2"
             echo "FETCH $url"
-            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 20 \
-              --output "$out.part" "$url"
+            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 20 --output "$out.part" "$url"
             mv "$out.part" "$out"
           }
-          fetch 'https://gh-proxy.com/https://github.com/commonsense/conceptnet5/archive/fda1b39607ea6f07e41ddce22d9d5f8360ded581.tar.gz' \
-            stage/sources/conceptnet5-fda1b39607ea.tar.gz
-          fetch 'https://gh-proxy.com/https://github.com/JulesBelveze/concepcy/archive/79f9232befa62e67a95c88f6881444a88aaa3db7.tar.gz' \
-            stage/sources/concepcy-79f9232befa6.tar.gz
-          fetch 'https://gh-proxy.com/https://github.com/commonsense/conceptnet-numberbatch/archive/5559f04ccc9f6ff54684901f6ce99efede3fedfd.tar.gz' \
-            stage/sources/conceptnet-numberbatch-5559f04ccc9f.tar.gz
-          fetch 'https://gh-proxy.com/https://github.com/mrdoob/three.js/archive/refs/tags/r184.tar.gz' \
-            stage/sources/three-r184.tar.gz
-          fetch 'https://gh-proxy.com/https://github.com/playcanvas/engine/archive/refs/tags/v2.18.1.tar.gz' \
-            stage/sources/playcanvas-engine-v2.18.1.tar.gz
+          fetch 'https://gh-proxy.com/https://github.com/commonsense/conceptnet5/archive/fda1b39607ea6f07e41ddce22d9d5f8360ded581.tar.gz' stage/sources/conceptnet5-fda1b39607ea.tar.gz
+          fetch 'https://gh-proxy.com/https://github.com/JulesBelveze/concepcy/archive/79f9232befa62e67a95c88f6881444a88aaa3db7.tar.gz' stage/sources/concepcy-79f9232befa6.tar.gz
+          fetch 'https://gh-proxy.com/https://github.com/commonsense/conceptnet-numberbatch/archive/5559f04ccc9f6ff54684901f6ce99efede3fedfd.tar.gz' stage/sources/conceptnet-numberbatch-5559f04ccc9f.tar.gz
+          fetch 'https://gh-proxy.com/https://github.com/mrdoob/three.js/archive/refs/tags/r184.tar.gz' stage/sources/three-r184.tar.gz
+          fetch 'https://gh-proxy.com/https://github.com/playcanvas/engine/archive/refs/tags/v2.18.1.tar.gz' stage/sources/playcanvas-engine-v2.18.1.tar.gz
 
       - name: Fetch bounded Numberbatch English and Dutch data
         shell: bash
@@ -48,14 +42,11 @@ jobs:
           fetch() {
             local url="$1" out="$2"
             echo "FETCH $url"
-            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 20 \
-              --output "$out.part" "$url"
+            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 20 --output "$out.part" "$url"
             mv "$out.part" "$out"
           }
-          fetch 'https://zenodo.org/records/4911598/files/numberbatch-19.08-en.zip?download=1' \
-            stage/data/numberbatch-19.08-en.zip
-          fetch 'https://zenodo.org/records/4911598/files/numberbatch-19.08-nl.zip?download=1' \
-            stage/data/numberbatch-19.08-nl.zip
+          fetch 'https://zenodo.org/records/4911598/files/numberbatch-19.08-en.zip?download=1' stage/data/numberbatch-19.08-en.zip
+          fetch 'https://zenodo.org/records/4911598/files/numberbatch-19.08-nl.zip?download=1' stage/data/numberbatch-19.08-nl.zip
 
       - name: Record provenance and verify archives
         shell: bash
@@ -85,11 +76,43 @@ jobs:
           (cd stage && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
           du -h stage/sources/* stage/data/* | tee stage/provenance/SIZES.txt
 
-      - name: Upload staging artifact
+      - name: Upload core sources and provenance
         uses: actions/upload-artifact@v4
         with:
-          name: conceptnet-vm-lab-inputs-20260806
-          path: stage
+          name: conceptnet-core-sources-20260806
+          path: |
+            stage/sources/conceptnet5-fda1b39607ea.tar.gz
+            stage/sources/concepcy-79f9232befa6.tar.gz
+            stage/sources/conceptnet-numberbatch-5559f04ccc9f.tar.gz
+            stage/provenance
+            stage/SHA256SUMS
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload Three source
+        uses: actions/upload-artifact@v4
+        with:
+          name: three-r184-source-20260806
+          path: stage/sources/three-r184.tar.gz
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload PlayCanvas source
+        uses: actions/upload-artifact@v4
+        with:
+          name: playcanvas-v2.18.1-source-20260806
+          path: stage/sources/playcanvas-engine-v2.18.1.tar.gz
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload Numberbatch English and Dutch
+        uses: actions/upload-artifact@v4
+        with:
+          name: numberbatch-en-nl-19.08-20260806
+          path: stage/data
           compression-level: 0
           retention-days: 7
           if-no-files-found: error
