@@ -70,8 +70,18 @@ jobs:
           Numberbatch 19.08 filtered English/Dutch files from Zenodo record 4911598
           EOF
           find stage/sources -name '*.tar.gz' -print0 | xargs -0 -n1 tar -tzf >/dev/null
-          unzip -tq stage/data/numberbatch-19.08-en.zip
-          unzip -tq stage/data/numberbatch-19.08-nl.zip
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile
+          for path in sorted(Path('stage/data').glob('*.zip')):
+              with zipfile.ZipFile(path) as zf:
+                  assert zf.infolist(), path
+                  for info in zf.infolist():
+                      if not info.is_dir():
+                          with zf.open(info) as f:
+                              f.read(4096)
+                  print(path, [(i.filename, i.file_size, i.compress_type) for i in zf.infolist()])
+          PY
           (cd stage && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
           du -h stage/sources/* stage/data/* | tee stage/provenance/SIZES.txt
 
